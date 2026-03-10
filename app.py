@@ -19,7 +19,8 @@ modulo = st.sidebar.radio(
         "PACHAMBEAR",
         "FERIAS",
         "COMERCIO AMBULATORIO",
-        "ANUNCIOS PUBLICITARIOS"
+        "ANUNCIOS PUBLICITARIOS",
+        "LICENCIAS DE FUNCIONAMIENTO"
     )
 )
 # Encabezado principal
