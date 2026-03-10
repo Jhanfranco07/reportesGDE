@@ -1,6 +1,7 @@
-import streamlit as st
+﻿import streamlit as st
 from modules.pachambear import show_pachambear_module
 from modules.ferias import show_ferias_module
+from modules.comercio_ambulatorio import show_comercio_ambulatorio_module
 
 # Configuración de la página
 st.set_page_config(
@@ -13,7 +14,7 @@ st.set_page_config(
 st.sidebar.title("📁 Navegación")
 modulo = st.sidebar.radio(
     "Seleccione un módulo:",
-    ("PACHAMBEAR", "FERIAS", "Otros reportes")
+    ("PACHAMBEAR", "FERIAS", "COMERCIO AMBULATORIO", "Otros reportes")
 )
 
 # Encabezado principal
@@ -25,5 +26,7 @@ if modulo == "PACHAMBEAR":
     show_pachambear_module()
 elif modulo == "FERIAS":
     show_ferias_module()
+elif modulo == "COMERCIO AMBULATORIO":
+    show_comercio_ambulatorio_module()
 else:
     st.info("⚙️ Módulo en desarrollo. Próximamente disponible.")
