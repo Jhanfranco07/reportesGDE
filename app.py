@@ -3,7 +3,7 @@ from modules.pachambear import show_pachambear_module
 from modules.ferias import show_ferias_module
 from modules.comercio_ambulatorio import show_comercio_ambulatorio_module
 from modules.anuncios_publicitarios import show_anuncios_publicitarios_module
-
+from modules.licencias_funcionamiento import show_licencias_funcionamiento_module
 # Configuración de la página
 st.set_page_config(
     page_title="Sistema de Reportes Municipales",
@@ -22,7 +22,6 @@ modulo = st.sidebar.radio(
         "ANUNCIOS PUBLICITARIOS"
     )
 )
-
 # Encabezado principal
 st.title("📋 Reportes Estadísticos de la Gerencia de Licencias y Desarrollo Económico")
 st.markdown("---")
@@ -36,5 +35,7 @@ elif modulo == "COMERCIO AMBULATORIO":
     show_comercio_ambulatorio_module()
 elif modulo == "ANUNCIOS PUBLICITARIOS":
     show_anuncios_publicitarios_module()
+elif modulo == "LICENCIAS DE FUNCIONAMIENTO":
+    show_licencias_funcionamiento_module()
 else:
     st.info("⚙️ Módulo en desarrollo. Próximamente disponible.")
