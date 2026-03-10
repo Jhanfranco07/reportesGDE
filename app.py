@@ -5,6 +5,7 @@ from modules.comercio_ambulatorio import show_comercio_ambulatorio_module
 from modules.anuncios_publicitarios import show_anuncios_publicitarios_module
 from modules.licencias_funcionamiento import show_licencias_funcionamiento_module
 from modules.pachamikuy import show_pachamikuy_module
+from modules.pachacard import show_pachacard_module
 # Configuración de la página
 st.set_page_config(
     page_title="Sistema de Reportes Municipales",
@@ -18,6 +19,7 @@ modulo = st.sidebar.radio(
     "Seleccione un módulo:",
     (   
         "PACHAMIKUY",
+        "PACHACARD",
         "PACHAMBEAR",
         "FERIAS",
         "COMERCIO AMBULATORIO",
@@ -32,6 +34,8 @@ st.markdown("---")
 # Mostrar módulo seleccionado
 if modulo == "PACHAMBEAR":
     show_pachambear_module()
+elif modulo == "PACHACARD":
+    show_pachacard_module()
 elif modulo == "FERIAS":
     show_ferias_module()
 elif modulo == "COMERCIO AMBULATORIO":
