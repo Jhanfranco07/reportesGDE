@@ -13,6 +13,8 @@ YEAR_COLORS = {
     "2026": "#f39c12",
 }
 
+YEAR_ORDER = ["2023", "2024", "2025", "2026"]
+
 MONTH_ORDER = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
@@ -43,7 +45,6 @@ def load_comercio_ambulatorio_data():
     try:
         data_path = Path(__file__).parent.parent / "data" / "comercio_ambulatorio.csv"
 
-        # Leer CSV como texto para evitar problemas al inicio
         df_raw = pd.read_csv(
             data_path,
             sep=";",
@@ -51,22 +52,23 @@ def load_comercio_ambulatorio_data():
             dtype=str
         )
 
-        # Limpiar nombres de columnas
         df_raw.columns = df_raw.columns.str.strip()
 
-        # Caso 1: si ya existe una columna FECHA_EMITIDA
+        # Caso 1: si el archivo ya viene con FECHA_EMITIDA
         if "FECHA_EMITIDA" in df_raw.columns:
             df = df_raw.copy()
+
             df["FECHA_EMITIDA"] = pd.to_datetime(
                 df["FECHA_EMITIDA"],
                 dayfirst=True,
                 errors="coerce"
             )
+
             df = df.dropna(subset=["FECHA_EMITIDA"])
             df["AÑO"] = df["FECHA_EMITIDA"].dt.year.astype(str)
 
         else:
-            # Caso 2: tu CSV actual viene con columnas 2023, 2024, 2025, 2026...
+            # Caso 2: columnas por año: 2023, 2024, 2025, 2026...
             year_cols = [col for col in df_raw.columns if col.strip().isdigit()]
 
             if not year_cols:
@@ -74,31 +76,29 @@ def load_comercio_ambulatorio_data():
                     "No se encontró la columna 'FECHA_EMITIDA' ni columnas de años como 2023, 2024, 2025, 2026."
                 )
 
-            # Convertir de formato ancho a formato largo
             df = df_raw[year_cols].melt(
                 var_name="AÑO",
                 value_name="FECHA_EMITIDA"
             )
 
-            # Limpiar vacíos
             df["FECHA_EMITIDA"] = df["FECHA_EMITIDA"].astype(str).str.strip()
+
             df = df[
                 df["FECHA_EMITIDA"].notna() &
                 (df["FECHA_EMITIDA"] != "") &
                 (df["FECHA_EMITIDA"].str.lower() != "nan")
             ]
 
-            # Convertir a fecha
             df["FECHA_EMITIDA"] = pd.to_datetime(
                 df["FECHA_EMITIDA"],
                 format="%d/%m/%Y",
                 errors="coerce"
             )
 
-            # Quitar fechas inválidas
             df = df.dropna(subset=["FECHA_EMITIDA"])
 
         # Campos derivados
+        df["AÑO"] = df["AÑO"].astype(str)
         df["MES_NUM"] = df["FECHA_EMITIDA"].dt.month
         df["MES"] = df["MES_NUM"].map(get_spanish_month)
 
@@ -130,8 +130,11 @@ def grafico_comparativa_meses(df):
         color="AÑO",
         barmode="group",
         color_discrete_map=YEAR_COLORS,
+        category_orders={
+            "MES": MONTH_ORDER,
+            "AÑO": YEAR_ORDER
+        },
         height=450,
-        category_orders={"MES": MONTH_ORDER},
         labels={
             "AUTORIZACIONES": "Cantidad de Autorizaciones",
             "MES": "Mes",
@@ -143,7 +146,8 @@ def grafico_comparativa_meses(df):
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis_title="Mes",
         yaxis_title="Cantidad de Autorizaciones",
-        hovermode="x unified"
+        hovermode="x unified",
+        legend_title="Año"
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -168,8 +172,11 @@ def grafico_crecimiento_mensual(df):
         markers=True,
         line_shape="spline",
         color_discrete_map=YEAR_COLORS,
+        category_orders={
+            "MES": MONTH_ORDER,
+            "AÑO": YEAR_ORDER
+        },
         height=450,
-        category_orders={"MES": MONTH_ORDER},
         labels={
             "AUTORIZACIONES": "Cantidad de Autorizaciones",
             "MES": "Mes",
@@ -181,7 +188,8 @@ def grafico_crecimiento_mensual(df):
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis_title="Mes",
         yaxis_title="Cantidad de Autorizaciones",
-        hovermode="x unified"
+        hovermode="x unified",
+        legend_title="Año"
     )
 
     fig.update_traces(
@@ -199,8 +207,8 @@ def grafico_comparativa_por_ano(df):
     anual = (
         df.groupby("AÑO")
         .size()
+        .reindex(YEAR_ORDER, fill_value=0)
         .reset_index(name="TOTAL_AUTORIZACIONES")
-        .sort_values("AÑO")
     )
 
     fig = px.bar(
@@ -208,9 +216,10 @@ def grafico_comparativa_por_ano(df):
         x="AÑO",
         y="TOTAL_AUTORIZACIONES",
         color="AÑO",
-        color_discrete_map=YEAR_COLORS,
-        height=350,
         text="TOTAL_AUTORIZACIONES",
+        color_discrete_map=YEAR_COLORS,
+        category_orders={"AÑO": YEAR_ORDER},
+        height=350,
         labels={
             "TOTAL_AUTORIZACIONES": "Total de Autorizaciones",
             "AÑO": "Año",
@@ -223,6 +232,8 @@ def grafico_comparativa_por_ano(df):
         yaxis_title="Total de Autorizaciones",
         showlegend=False
     )
+
+    fig.update_xaxes(type="category")
 
     fig.update_traces(
         textposition="outside",
@@ -255,13 +266,11 @@ def tabla_resumen(df):
         .sort_values("MES_NUM")
     )
 
-    # Asegurar columnas
-    for year in ["2023", "2024", "2025", "2026"]:
+    for year in YEAR_ORDER:
         if year not in tabla_df.columns:
             tabla_df[year] = 0
 
-    tabla_df["Total"] = tabla_df[["2023", "2024", "2025", "2026"]].sum(axis=1)
-
+    tabla_df["Total"] = tabla_df[YEAR_ORDER].sum(axis=1)
     tabla_df = tabla_df[["MES", "2023", "2024", "2025", "2026", "Total"]]
     tabla_df = tabla_df.rename(columns={"MES": "Mes"})
 
@@ -308,6 +317,119 @@ def estadisticas_generales(df):
     c4.metric("📈 Promedio/Mes", f"{promedio_mes:.1f}")
 
 
+def observaciones(df):
+    """Muestra observaciones automáticas del comportamiento anual y mensual."""
+    st.subheader("📝 Observaciones")
+
+    total_anual = (
+        df.groupby("AÑO")
+        .size()
+        .reindex(YEAR_ORDER, fill_value=0)
+    )
+
+    mes_general = (
+        df.groupby(["MES_NUM", "MES"])
+        .size()
+        .reset_index(name="TOTAL")
+        .sort_values(["TOTAL", "MES_NUM"], ascending=[False, True])
+        .iloc[0]
+    )
+
+    pico_por_anio = (
+        df.groupby(["AÑO", "MES_NUM", "MES"])
+        .size()
+        .reset_index(name="TOTAL")
+        .sort_values(["AÑO", "TOTAL", "MES_NUM"], ascending=[True, False, True])
+        .drop_duplicates(subset=["AÑO"])
+        .sort_values("AÑO")
+    )
+
+    def obtener_pico(anio):
+        fila = pico_por_anio[pico_por_anio["AÑO"] == anio]
+        return fila.iloc[0] if not fila.empty else None
+
+    pico_2023 = obtener_pico("2023")
+    pico_2024 = obtener_pico("2024")
+    pico_2025 = obtener_pico("2025")
+    pico_2026 = obtener_pico("2026")
+
+    def variacion_pct(base, actual):
+        if base == 0:
+            return None
+        return ((actual - base) / base) * 100
+
+    var_23_24 = variacion_pct(total_anual.get("2023", 0), total_anual.get("2024", 0))
+    var_24_25 = variacion_pct(total_anual.get("2024", 0), total_anual.get("2025", 0))
+    var_25_26 = variacion_pct(total_anual.get("2025", 0), total_anual.get("2026", 0))
+
+    nota_2026 = ""
+    df_2026 = df[df["AÑO"] == "2026"]
+    if not df_2026.empty:
+        ultimo_mes_2026 = int(df_2026["MES_NUM"].max())
+        ultimo_mes_nombre = MONTH_MAP.get(ultimo_mes_2026, "")
+        if ultimo_mes_2026 < 12:
+            nota_2026 = (
+                f"- El año **2026** presenta información parcial hasta **{ultimo_mes_nombre}**, "
+                "por lo que su comparación con años completos debe interpretarse con cautela.\n"
+            )
+
+    texto = (
+        f"- En el periodo analizado, el año con mayor número de autorizaciones emitidas fue "
+        f"**{total_anual.idxmax()}**, con **{int(total_anual.max())}** registros.\n"
+        f"- El mes con mayor concentración de autorizaciones en todo el periodo fue "
+        f"**{mes_general['MES']}**, con **{int(mes_general['TOTAL'])}** registros acumulados.\n"
+    )
+
+    if pico_2023 is not None:
+        texto += (
+            f"- En **2023**, el mes con mayor número de autorizaciones fue "
+            f"**{pico_2023['MES']}**, con **{int(pico_2023['TOTAL'])}** registros.\n"
+        )
+
+    if pico_2024 is not None:
+        texto += (
+            f"- En **2024**, el mes con mayor número de autorizaciones fue "
+            f"**{pico_2024['MES']}**, con **{int(pico_2024['TOTAL'])}** registros.\n"
+        )
+
+    if pico_2025 is not None:
+        texto += (
+            f"- En **2025**, el mes con mayor número de autorizaciones fue "
+            f"**{pico_2025['MES']}**, con **{int(pico_2025['TOTAL'])}** registros.\n"
+        )
+
+    if pico_2026 is not None:
+        texto += (
+            f"- En **2026**, el mes con mayor número de autorizaciones fue "
+            f"**{pico_2026['MES']}**, con **{int(pico_2026['TOTAL'])}** registros.\n"
+        )
+
+    if var_23_24 is not None:
+        tendencia = "disminución" if var_23_24 < 0 else "incremento"
+        texto += (
+            f"- Entre **2023 y 2024** se observa una **{tendencia}** de "
+            f"**{abs(var_23_24):.1f}%** en el total de autorizaciones emitidas.\n"
+        )
+
+    if var_24_25 is not None:
+        tendencia = "disminución" if var_24_25 < 0 else "incremento"
+        texto += (
+            f"- Entre **2024 y 2025** se observa una **{tendencia}** de "
+            f"**{abs(var_24_25):.1f}%** en el total de autorizaciones emitidas.\n"
+        )
+
+    if var_25_26 is not None:
+        tendencia = "disminución" if var_25_26 < 0 else "incremento"
+        texto += (
+            f"- Entre **2025 y 2026** se observa una **{tendencia}** de "
+            f"**{abs(var_25_26):.1f}%** en el total registrado.\n"
+        )
+
+    texto += nota_2026
+
+    st.info(texto)
+
+
 def show_comercio_ambulatorio_module():
     """Módulo completo de Comercio Ambulatorio."""
     st.header("📍 Módulo de Autorizaciones de Comercio Ambulatorio")
@@ -319,10 +441,6 @@ def show_comercio_ambulatorio_module():
     if df is None or df.empty:
         st.error("No se pudieron cargar los datos.")
         return
-
-    # Debug temporal, si quieres luego lo quitas
-    # st.write("Columnas:", df.columns.tolist())
-    # st.write(df.head())
 
     estadisticas_generales(df)
     st.markdown("---")
@@ -337,3 +455,6 @@ def show_comercio_ambulatorio_module():
     st.markdown("---")
 
     tabla_resumen(df)
+    st.markdown("---")
+
+    observaciones(df)
